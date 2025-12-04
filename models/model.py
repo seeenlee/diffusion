@@ -62,6 +62,29 @@ class ResnetBlock(nn.Module):
 
         return out
 
+class AttentionBlock(nn.Module):
+    def __init__(self, channels, num_heads):
+        super().__init__()
+        self.norm = nn.GroupNorm(8, channels)
+        self.attention = nn.MultiheadAttention(channels, num_heads, batch_first=True)
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+
+        # reshaping and normalizing
+        out = x.reshape(B, C, H*W)
+        out = self.norm(out)
+        out = out.transpose(1, 2)
+
+        # self-attention calculation
+        out, _ = self.attention(out, out, out)
+
+        # reshaping attention output back to BxCxHxW
+        out = out.transpose(1, 2)
+        out = out.reshape(B, C, H, W)
+
+        return x + out
+
 class DownBlock(nn.Module):
     def __init__(self, in_channels, out_channels, t_emb_dim, down_sample=True, num_heads=4, num_layers=1):
         super().__init__()

@@ -90,8 +90,24 @@ class DownBlock(nn.Module):
         super().__init__()
         self.num_layers = num_layers
         self.down_sample = down_sample
-        self.resnet_conv_first = nn.ModuleList([
-            nn.Sequential(
-                nn.GroupNorm()
-            )
-        ])
+
+        self.resnet_blocks = []
+        for i in range(num_layers):
+            resnet_block = ResnetBlock(in_channels=in_channels if i == 0 else out_channels, out_channels=out_channels, t_embedding_dim=t_emb_dim)
+            self.resnet_blocks.append(resnet_block)
+        self.resnet_blocks = nn.ModuleList(self.resnet_blocks)
+
+        self.attention_block = AttentionBlock(channels=out_channels, num_heads=num_heads)
+
+        self.down_sample_layer = nn.Identity()
+        if self.down_sample:
+            self.down_sample_layer = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=2, padding=1)
+
+    def forward(self, x, t_embeddings):
+        out = x
+        for i in range(self.num_layers):
+            out = self.resnet_blocks[i](out, t_embeddings)
+        
+        out = self.attention_block(out)
+        out = self.down_sample_layer(out)
+        return out

@@ -11,7 +11,7 @@
     "im_channels": 1,
     "im_size": 28,
     "down_channels": [32, 64, 128, 256],
-    "mid_channels": [256, 256, 128],
+    "mid_channels": [256],
     "down_sample": [true, true, false],
     "time_emb_dim": 128,
     "num_down_layers": 2,
@@ -20,7 +20,7 @@
     "num_heads": 4
   },
   "train_params": {
-    "task_name": "default",
+    "task_name": "mnist",
     "batch_size": 64,
     "num_epochs": 40,
     "num_samples": 100,

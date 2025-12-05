@@ -227,17 +227,16 @@ class Unet(nn.Module):
 
         skip_connections = []
 
-        print(len(self.down_blocks))
         for down_block in self.down_blocks:
             out, skip_connection = down_block(out, t_embeddings)
-            skip_connections.append(skip_connection.detach().clone())
+            skip_connections.append(skip_connection)
         
         for mid_block in self.mid_blocks:
             out = mid_block(out, t_embeddings)
         
         for up_block in self.up_blocks:
             skip_connection = skip_connections.pop()
-            out = up_block(out, t_embeddings, skip_connection)
+            out = up_block(out, skip_connection, t_embeddings)
 
         out = self.norm_out(out)
         out = self.activation_out(out)

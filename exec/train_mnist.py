@@ -9,7 +9,7 @@ from tqdm import tqdm
 from torch import nn
 import numpy as np
 import os
-
+from torch.utils.data import DataLoader
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 
 def train(args):
@@ -31,6 +31,7 @@ def train(args):
         transforms.Normalize(mean=0.5, std=0.5)
     ])
     train_dataset = datasets.MNIST(root="data", train=True, download=True, transform=transform)
+    train_loader = DataLoader(train_dataset, batch_size=train_params["batch_size"], shuffle=True)
 
     model = Unet(model_params["im_channels"], model_params["down_channels"], model_params["mid_channels"], model_params["time_emb_dim"], model_params["down_sample"], model_params["num_down_layers"], model_params["num_mid_layers"], model_params["num_up_layers"], model_params["num_heads"]).to(device)
 
@@ -42,7 +43,7 @@ def train(args):
 
     for epoch_idx in range(num_epochs):
         losses = []
-        for im in tqdm(train_dataset):
+        for im, _ in tqdm(train_loader):
             optimizer.zero_grad()
             im = im.float().to(device)
 

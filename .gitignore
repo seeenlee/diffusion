@@ -1,1 +1,4 @@
 diffusion/
+
+data/
+__pycache__/

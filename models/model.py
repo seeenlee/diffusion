@@ -108,11 +108,13 @@ class DownBlock(nn.Module):
             self.down_sample_layer = nn.Conv2d(out_channels, out_channels, kernel_size=3, stride=2, padding=1)
 
     def forward(self, x, t_embeddings):
+        # x --> B x C_in x H x W
         out = x
         for i in range(self.num_layers):
             out = self.resnet_blocks[i](out, t_embeddings)
             out = self.attention_blocks[i](out)
         
+        # skip --> B x C_out x H x W
         skip_connection = out
         out = self.down_sample_layer(out)
         return out, skip_connection
@@ -139,7 +141,7 @@ class UpBlock(nn.Module):
         self.num_layers = num_layers
         self.up_sample = up_sample
 
-        combined_channels = 2 * out_channels
+        combined_channels = 2 * in_channels
         self.resnet_blocks = []
         for i in range(num_layers):
             resnet_block = ResnetBlock(in_channels=combined_channels if i == 0 else out_channels, out_channels=out_channels, t_embedding_dim=t_emb_dim)
@@ -154,7 +156,7 @@ class UpBlock(nn.Module):
 
         self.up_sample_layer = nn.Identity()
         if self.up_sample:
-            self.up_sample_layer = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=4, stride=2, padding=1)
+            self.up_sample_layer = nn.ConvTranspose2d(in_channels, in_channels, kernel_size=4, stride=2, padding=1)
 
     def forward(self, x, skip_connection, t_embeddings):
         x = self.up_sample_layer(x)
@@ -165,4 +167,79 @@ class UpBlock(nn.Module):
             out = self.resnet_blocks[i](out, t_embeddings)
             out = self.attention_blocks[i](out)
         
+        return out
+
+
+class Unet(nn.Module):
+    def __init__(self, im_channels, down_channels, mid_channels, t_emb_dim, down_sample,
+                downblock_layers, midblock_layers, upblock_layers, num_heads=4):
+        super().__init__()
+
+        self.im_channels = im_channels
+        self.down_channels = down_channels
+        self.mid_channels = mid_channels
+        self.up_channels = list(reversed(down_channels))
+        self.t_emb_dim = t_emb_dim
+        self.down_sample = down_sample
+        self.up_sample = list(reversed(down_sample))
+        self.downblock_layers = downblock_layers
+        self.midblock_layers = midblock_layers
+        self.upblock_layers = upblock_layers
+        self.num_heads = num_heads
+
+
+        self.t_proj_init = nn.Sequential(
+                            nn.Linear(self.t_emb_dim, self.t_emb_dim),
+                            nn.SiLU(),
+                            nn.Linear(self.t_emb_dim, self.t_emb_dim)
+                        )
+
+        self.conv_in = nn.Conv2d(self.im_channels, self.down_channels[0], kernel_size=3, stride=1, padding=(1, 1))
+
+        self.down_blocks = nn.ModuleList([])
+        for i in range(len(self.down_channels)-1):
+            down_block = DownBlock(self.down_channels[i], self.down_channels[i+1], self.t_emb_dim,
+                                   self.down_sample[i], self.num_heads, self.downblock_layers)
+            self.down_blocks.append(down_block)
+        
+        self.mid_blocks = nn.ModuleList([])
+        for i in range(len(self.mid_channels)):
+            mid_block = MidBlock(self.mid_channels[i], self.t_emb_dim, self.num_heads, self.midblock_layers)
+            self.mid_blocks.append(mid_block)
+        
+        self.up_blocks = nn.ModuleList([])
+        for i in range(len(self.up_channels)-1):
+            up_block = UpBlock(self.up_channels[i], self.up_channels[i+1], self.t_emb_dim,
+                               self.up_sample[i], self.num_heads, self.upblock_layers)
+            self.up_blocks.append(up_block)
+        
+        self.norm_out = nn.GroupNorm(8, self.up_channels[-1])
+        self.activation_out = nn.SiLU()
+        self.conv_out = nn.Conv2d(self.up_channels[-1], self.im_channels, kernel_size=3, stride=1, padding=1)
+    
+    def forward(self, x, t):
+        out = x
+        
+        out = self.conv_in(out)
+
+        t_embeddings = get_timestep_embedding(torch.as_tensor(t), self.t_emb_dim)
+        t_embeddings = self.t_proj_init(t_embeddings)
+
+        skip_connections = []
+
+        for down_block in self.down_blocks:
+            out, skip_connection = down_block(out, t_embeddings)
+            skip_connections.append(skip_connection)
+        
+        for mid_block in self.mid_blocks:
+            out = mid_block(out)
+        
+        for up_block in self.up_blocks:
+            skip_connection = skip_connections.pop()
+            out = up_block(out, t_embeddings, skip_connection)
+
+        out = self.norm_out(out)
+        out = self.activation_out(out)
+        out = self.conv_out(out)
+
         return out

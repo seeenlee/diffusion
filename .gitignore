@@ -2,3 +2,7 @@ diffusion/
 
 data/
 __pycache__/
+
+.venv/
+
+mnist/

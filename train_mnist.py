@@ -41,7 +41,7 @@ def train(args):
         os.makedirs(train_params["task_name"])
 
     if os.path.exists(os.path.join(train_params["task_name"], train_params["ckpt_name"])):
-        model.load_state_dict(torch.load(os.path.join(train_params["task_name"], train_params["ckpt_name"])), map_location=device)
+        model.load_state_dict(torch.load(os.path.join(train_params["task_name"], train_params["ckpt_name"]), map_location=device))
         print(f"Loaded model from {os.path.join(train_params['task_name'], train_params['ckpt_name'])}")
 
     num_epochs = train_params["num_epochs"]

@@ -11,6 +11,7 @@ import numpy as np
 import os
 from torch.utils.data import DataLoader
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
+is_batch_job = 'SLURM_JOB_ID' in os.environ
 
 def train(args):
     with open(args.config, "r") as f:
@@ -50,7 +51,7 @@ def train(args):
 
     for epoch_idx in range(num_epochs):
         losses = []
-        for im, _ in tqdm(train_loader):
+        for im, _ in tqdm(train_loader, disable=is_batch_job):
             optimizer.zero_grad()
             im = im.float().to(device)
 

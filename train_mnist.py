@@ -12,6 +12,7 @@ import os
 from torch.utils.data import DataLoader
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
 # is_batch_job = 'SLURM_JOB_ID' in os.environ
+is_batch_job = False
 
 def train(args):
     with open(args.config, "r") as f:

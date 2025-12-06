@@ -1,71 +1,96 @@
 import torch
-import torch.nn as nn
-import numpy as np
-import argparse
+import torchvision
 import os
-import json
-from torchvision import datasets, transforms
-import torchvision.io as io
-from torch.utils.data import DataLoader
-from ignite.metrics import FID, InceptionScore
-import pytorch_fid_wrapper as pfw
+from torchvision import transforms
+from PIL import Image
+from pytorch_fid import fid_score
 
-
-def evaluate(args):
-    image_directory = os.path.join(args.dataset, 'generated_samples')
-
-    image_paths = [
-        os.path.join(image_directory, f)
-        for f in os.listdir(image_directory)
-        if f.lower().endswith('.png')
-    ]
-
-    transforms = transforms.Compose([
+def save_real_images():
+    """
+    Load MNIST training set and save images to disk for FID calculation.
+    Only saves if the directory doesn't exist or is empty.
+    """
+    real_samples_dir = '/scratch/scholar/lee3966/diffusion/mnist/real_samples'
+    
+    # Check if real samples already exist
+    if os.path.exists(real_samples_dir) and len(os.listdir(real_samples_dir)) > 0:
+        print(f"Real samples already exist in {real_samples_dir}. Skipping extraction.")
+        return real_samples_dir
+    
+    print(f"Saving MNIST training set images to {real_samples_dir}...")
+    os.makedirs(real_samples_dir, exist_ok=True)
+    
+    # Load MNIST training set
+    transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.ToDtype(torch.float32, scale=True),
-        transforms.Lambda(lambda x: x.repeat(3, 1, 1)) if args.dataset == 'mnist' else transforms.Identity(),
     ])
-
-    img_list = []
-    for path in image_paths:
-        try:
-            img = io.read_image(path)
-            img = transforms(img)
-            img_list.append(img)
-        except Exception as e:
-            print(f"Error loading {path}: {e}")
-            continue
-
-    img_list = torch.stack(img_list)
-
-    train_dataset = None
-    if 'mnist' in args.dataset:
-        train_dataset = datasets.MNIST(root="data", train=True, download=True, transform=transforms)
-    elif 'cifar10' in args.dataset:
-        train_dataset = datasets.CIFAR10(root="cifar10_data", train=True, download=True, transform=transforms)
-    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-
-    true_images = []
-    for images, _ in train_loader:
-        true_images.append(images)
-
-    true_images = torch.cat(true_images, dim=0)
-
-    config = pfw.Config(
-        batch_size=64,
-        dims=2048,
-        device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    mnist_test = torchvision.datasets.MNIST(
+        root='data',
+        train=True,
+        download=True,
+        transform=transform
     )
+    
+    # Save all test images
+    for idx in range(len(mnist_test)):
+        img_tensor, _ = mnist_test[idx]
+        
+        # Convert tensor to PIL Image (grayscale)
+        img_tensor = img_tensor.squeeze(0)  # Remove channel dimension
+        img = transforms.ToPILImage()(img_tensor)
+        
+        # Save as PNG
+        img.save(os.path.join(real_samples_dir, f'real_{idx:05d}.png'))
+        
+        if (idx + 1) % 1000 == 0:
+            print(f"Saved {idx + 1}/{len(mnist_test)} images")
+    
+    print(f"Saved {len(mnist_test)} real images to {real_samples_dir}")
+    return real_samples_dir
 
-    fid_score = pfw.fid(true_images, img_list, config)
 
-    print(f"FID Score for {args.dataset}: {fid_score}")
-
+def calculate_fid():
+    """
+    Calculate FID score between generated samples and real MNIST training images.
+    """
+    generated_samples_dir = '/scratch/scholar/lee3966/diffusion/mnist/generated_samples'
+    
+    # Ensure generated samples exist
+    if not os.path.exists(generated_samples_dir):
+        raise FileNotFoundError(f"Generated samples directory not found: {generated_samples_dir}")
+    
+    num_generated = len([f for f in os.listdir(generated_samples_dir) if f.endswith('.png')])
+    if num_generated == 0:
+        raise ValueError(f"No images found in {generated_samples_dir}")
+    
+    print(f"Found {num_generated} generated samples in {generated_samples_dir}")
+    
+    # Save real images if needed
+    real_samples_dir = save_real_images()
+    
+    num_real = len([f for f in os.listdir(real_samples_dir) if f.endswith('.png')])
+    print(f"Using {num_real} real images from {real_samples_dir}")
+    
+    # Calculate FID score
+    print("\nCalculating FID score...")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
+    
+    fid_value = fid_score.calculate_fid_given_paths(
+        [generated_samples_dir, real_samples_dir],
+        batch_size=50,
+        device=device,
+        dims=2048
+    )
+    
+    print(f"\n{'='*50}")
+    print(f"FID Score: {fid_value:.2f}")
+    print(f"{'='*50}")
+    
+    return fid_value
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Arguments for evaluation')
-    parser.add_argument('--dataset', dest='dataset',
-                        default='mnist', type=str)
-    args = parser.parse_args()
-    evaluate(args)
+    calculate_fid()
+

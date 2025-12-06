@@ -98,9 +98,9 @@ def setup(args):
     model.eval()
     
     # Create the noise scheduler
-    scheduler = Scheduler(num_timesteps=diffusion_config['num_timesteps'],
-                                     beta_start=diffusion_config['beta_start'],
-                                     beta_end=diffusion_config['beta_end'])
+    scheduler = Scheduler(diffusion_config['num_timesteps'],
+                          diffusion_config['beta_start'],
+                          diffusion_config['beta_end'])
     with torch.no_grad():
         if args.generate_progress:
             generate_with_progress(model, scheduler, train_config, model_config, diffusion_config)

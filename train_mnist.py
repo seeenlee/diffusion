@@ -68,6 +68,6 @@ def train(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", dest="config", default="config/default.json", type=str)
+    parser.add_argument("--config", dest="config", default="config/mnist.json", type=str)
     args = parser.parse_args()
     train(args)

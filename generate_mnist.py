@@ -16,7 +16,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def generate_with_progress(model, scheduler, train_config, model_config, diffusion_config):
     r"""
     Sample stepwise by going backward one timestep at a time.
-    We save the x0 predictions
+    We save the x0 predictions every 10%
     """
     xt = torch.randn((train_config['num_samples_progress'],
                       model_config['im_channels'],
@@ -45,7 +45,7 @@ def generate_with_progress(model, scheduler, train_config, model_config, diffusi
 def generate(model, scheduler, train_config, model_config, diffusion_config):
     r"""
     Sample stepwise by going backward one timestep at a time.
-    We save the x0 predictions
+    We save the final generated images
     """
     xt = torch.randn((train_config['num_samples'],
                       model_config['im_channels'],

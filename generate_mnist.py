@@ -29,7 +29,7 @@ def generate_with_progress(model, scheduler, train_config, model_config, diffusi
         noise_pred = model(xt, torch.as_tensor(i).unsqueeze(0).to(device))
         
         # Use scheduler to get x0 and xt-1
-        xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+        xt, x0_pred = scheduler.sample_prev_timestep(xt, torch.as_tensor(i).to(device), noise_pred)
         
         # save predicted x_t every 10% of num_timesteps
         if i in save_steps:
@@ -57,7 +57,7 @@ def generate(model, scheduler, train_config, model_config, diffusion_config):
         noise_pred = model(xt, torch.as_tensor(i).unsqueeze(0).to(device))
         
         # Use scheduler to get x0 and xt-1
-        xt, x0_pred = scheduler.sample_prev_timestep(xt, noise_pred, torch.as_tensor(i).to(device))
+        xt, x0_pred = scheduler.sample_prev_timestep(xt, torch.as_tensor(i).to(device), noise_pred)
     
     gen_images = torch.clamp(xt, -1., 1.).detach().cpu()
     gen_images = (gen_images + 1) / 2

@@ -7,8 +7,6 @@ __pycache__/
 
 mnist/
 
-cifar10/
-
-cifar10_data/
+cifar10*/
 
 slurm-*.out

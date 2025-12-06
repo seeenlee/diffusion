@@ -27,6 +27,10 @@ class Scheduler:
         return sqrt_alpha_cumprod.to(x_t.device) * x_t + sqrt_one_minus_alphas_cumprod.to(x_t.device) * noise
     
     def sample_prev_timestep(self, x_t, t, noise):
+        # Convert t to scalar integer if it's a tensor
+        if isinstance(t, torch.Tensor):
+            t = t.item()
+        
         x0 = (x_t - (self.sqrt_one_minus_alphas_cumprod.to(x_t.device)[t] * noise)) / torch.sqrt(self.alpha_cumprod.to(x_t.device)[t])
         x0 = torch.clamp(x0, -1., 1.)
 

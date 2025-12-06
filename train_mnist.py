@@ -11,8 +11,8 @@ import numpy as np
 import os
 from torch.utils.data import DataLoader
 device = torch.device("cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu")
-# is_batch_job = 'SLURM_JOB_ID' in os.environ
-is_batch_job = False
+is_batch_job = 'SLURM_JOB_ID' in os.environ
+# is_batch_job = False
 
 def train(args):
     with open(args.config, "r") as f:
@@ -42,15 +42,24 @@ def train(args):
     if not os.path.exists(train_params["task_name"]):
         os.makedirs(train_params["task_name"])
 
-    if os.path.exists(os.path.join(train_params["task_name"], train_params["ckpt_name"])):
-        model.load_state_dict(torch.load(os.path.join(train_params["task_name"], train_params["ckpt_name"]), map_location=device))
-        print(f"Loaded model from {os.path.join(train_params['task_name'], train_params['ckpt_name'])}")
-
     num_epochs = train_params["num_epochs"]
     optimizer = Adam(model.parameters(), lr=train_params["lr"])
     criterion = nn.MSELoss()
+    
+    start_epoch = 0
+    checkpoint_path = os.path.join(train_params["task_name"], train_params["ckpt_name"])
+    if os.path.exists(checkpoint_path):
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location=device)
+            model.load_state_dict(checkpoint["model_state_dict"])
+            optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            start_epoch = checkpoint.get("epoch", 0) + 1
+            print(f"Loaded checkpoint from {checkpoint_path}, resuming from epoch {start_epoch}")
+        except Exception as e:
+            print(f"Warning: Could not load checkpoint from {checkpoint_path}: {e}")
+            print("Starting training from scratch")
 
-    for epoch_idx in range(num_epochs):
+    for epoch_idx in range(start_epoch, num_epochs):
         losses = []
         for im, _ in tqdm(train_loader, disable=is_batch_job):
             optimizer.zero_grad()
@@ -71,7 +80,13 @@ def train(args):
 
         print(f"Epoch {epoch_idx+1}/{num_epochs}, Loss: {np.mean(losses)}")
 
-        torch.save(model.state_dict(), os.path.join(train_params["task_name"],train_params["ckpt_name"]))
+        checkpoint = {
+            "epoch": epoch_idx,
+            "model_state_dict": model.state_dict(),
+            "optimizer_state_dict": optimizer.state_dict(),
+            "loss": np.mean(losses),
+        }
+        torch.save(checkpoint, checkpoint_path)
 
 
 

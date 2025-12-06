@@ -108,7 +108,7 @@ def setup(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Arguments for ddpm image generation')
     parser.add_argument('--config', dest='config_path',
-                        default='config/mnist.json', type=str)
+                        default='config/cifar10.json', type=str)
     parser.add_argument('--generate_progress', action='store_true', help='generate and save images along with their progress over timesteps')
     parser.add_argument('--generate_samples', action='store_true', help='generate and save final images')
     args = parser.parse_args()

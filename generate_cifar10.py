@@ -90,8 +90,11 @@ def setup(args):
     
     # Load model with checkpoint
     model = Unet(model_config).to(device)
-    model.load_state_dict(torch.load(os.path.join(train_config['task_name'],
-                                                  train_config['ckpt_name']), map_location=device))
+    checkpoint = torch.load(os.path.join(train_config['task_name'],
+                                         train_config['ckpt_name']), 
+                           map_location=device, 
+                           weights_only=False)
+    model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     
     # Create the noise scheduler

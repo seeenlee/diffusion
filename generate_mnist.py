@@ -76,7 +76,7 @@ def generate(model, scheduler, train_config, model_config, diffusion_config):
 
 def setup(args):
     # Read the config file #
-    with open(args.config, "r") as f:
+    with open(args.config_path, "r") as f:
         try:
             config = json.load(f)
         except json.JSONDecodeError:

@@ -39,9 +39,9 @@ def evaluate(args):
     img_list = torch.stack(img_list)
 
     train_dataset = None
-    if args.dataset == 'mnist':
+    if 'mnist' in args.dataset:
         train_dataset = datasets.MNIST(root="data", train=True, download=True, transform=transforms)
-    elif args.dataset == 'mnist':
+    elif 'cifar10' in args.dataset:
         train_dataset = datasets.CIFAR10(root="cifar10_data", train=True, download=True, transform=transforms)
     train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 

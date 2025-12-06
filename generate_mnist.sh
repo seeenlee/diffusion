@@ -5,4 +5,4 @@
 #SBATCH --time=2:00:00
 
 source .venv/bin/activate
-python3 -u train_mnist.py
+python3 generate_mnist.py --generate_samples

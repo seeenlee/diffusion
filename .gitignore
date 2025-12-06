@@ -6,3 +6,9 @@ __pycache__/
 .venv/
 
 mnist/
+
+cifar10/
+
+cifar10_data/
+
+slurm-*.out

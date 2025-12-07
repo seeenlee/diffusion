@@ -5,19 +5,23 @@ from torchvision import transforms
 from PIL import Image
 from pytorch_fid import fid_score
 
-def save_real_images():
+def save_real_images(args):
     """
     Load MNIST training set and save images to disk for FID calculation.
     Only saves if the directory doesn't exist or is empty.
     """
-    real_samples_dir = f'/scratch/scholar/{os.getenv("USER")}/diffusion/mnist/real_samples'
+    dataset_name = 'mnist'
+    if "cifar10" in args.config_path:
+        dataset_name = 'cifar10'
+
+    real_samples_dir = f'/scratch/scholar/{os.getenv("USER")}/diffusion/{dataset_name}/real_samples'
     
     # Check if real samples already exist
     if os.path.exists(real_samples_dir) and len(os.listdir(real_samples_dir)) > 0:
         print(f"Real samples already exist in {real_samples_dir}. Skipping extraction.")
         return real_samples_dir
     
-    print(f"Saving MNIST training set images to {real_samples_dir}...")
+    print(f"Saving {dataset_name} training set images to {real_samples_dir}...")
     os.makedirs(real_samples_dir, exist_ok=True)
     
     # Load MNIST training set
@@ -31,6 +35,9 @@ def save_real_images():
         download=True,
         transform=transform
     )
+
+    if mnist_test == 'cifar10':
+       mnist_test = torchvision.datasets.CIFAR10((root="cifar10_data", train=True, download=True, transform=transform))
     
     # Save all test images
     for idx in range(len(mnist_test)):
@@ -50,11 +57,11 @@ def save_real_images():
     return real_samples_dir
 
 
-def calculate_fid():
+def calculate_fid(args):
     """
     Calculate FID score between generated samples and real MNIST training images.
     """
-    generated_samples_dir = f'/scratch/scholar/{os.getenv("USER")}/diffusion/mnist/generated_samples'
+    generated_samples_dir = f'/scratch/scholar/{os.getenv("USER")}/diffusion/{args.config_path}/generated_samples'
     
     # Ensure generated samples exist
     if not os.path.exists(generated_samples_dir):
@@ -67,7 +74,7 @@ def calculate_fid():
     print(f"Found {num_generated} generated samples in {generated_samples_dir}")
     
     # Save real images if needed
-    real_samples_dir = save_real_images()
+    real_samples_dir = save_real_images(args)
     
     num_real = len([f for f in os.listdir(real_samples_dir) if f.endswith('.png')])
     print(f"Using {num_real} real images from {real_samples_dir}")
@@ -92,5 +99,9 @@ def calculate_fid():
 
 
 if __name__ == '__main__':
-    calculate_fid()
+    parser = argparse.ArgumentParser(description='Arguments for ddpm image generation')
+    parser.add_argument('--config', dest='config_path',
+                        default='mnist', type=str)
+    args = parser.parse_args()
+    calculate_fid(args)
 

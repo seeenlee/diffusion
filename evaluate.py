@@ -10,7 +10,7 @@ def save_real_images():
     Load MNIST training set and save images to disk for FID calculation.
     Only saves if the directory doesn't exist or is empty.
     """
-    real_samples_dir = '/scratch/scholar/lee3966/diffusion/mnist/real_samples'
+    real_samples_dir = f'/scratch/scholar/{os.getenv("USER")}/diffusion/mnist/real_samples'
     
     # Check if real samples already exist
     if os.path.exists(real_samples_dir) and len(os.listdir(real_samples_dir)) > 0:
@@ -54,11 +54,11 @@ def calculate_fid():
     """
     Calculate FID score between generated samples and real MNIST training images.
     """
-    generated_samples_dir = '/scratch/scholar/lee3966/diffusion/mnist/generated_samples'
+    generated_samples_dir = f'/scratch/scholar/{os.getenv("USER")}/diffusion/mnist/generated_samples'
     
     # Ensure generated samples exist
     if not os.path.exists(generated_samples_dir):
-        raise FileNotFoundError(f"Generated samples directory not found: {generated_samples_dir}")
+        raise FileNotFoundError(f"Generated samples directory not found: {generated_samples_dir} \n Add generated samples to the directory.")
     
     num_generated = len([f for f in os.listdir(generated_samples_dir) if f.endswith('.png')])
     if num_generated == 0:

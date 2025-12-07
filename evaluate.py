@@ -4,6 +4,8 @@ import os
 from torchvision import transforms
 from PIL import Image
 from pytorch_fid import fid_score
+import argparse
+import json
 
 def save_real_images(args):
     """

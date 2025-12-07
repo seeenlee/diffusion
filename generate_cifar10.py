@@ -52,12 +52,18 @@ def generate(model, scheduler, train_config, model_config, diffusion_config):
     final_sample_dir = os.path.join(train_config['task_name'], 'generated_samples')
     os.makedirs(final_sample_dir, exist_ok=True)
     
+    existing_files = [f for f in os.listdir(final_sample_dir) if f.endswith(('.png', '.jpg', '.jpeg'))]
+    num_files_existing = len(existing_files)
+    print(f"Found {num_files_existing} images in {final_sample_dir}")
+
     # Generate in batches to avoid OOM
-    batch_size = train_config.get('generation_batch_size', 1000)  # Default to 100 if not specified
+    batch_size = train_config.get('generation_batch_size', 100)  # Default to 100 if not specified
     num_samples = train_config['num_samples']
-    num_batches = (num_samples + batch_size - 1) // batch_size  # Ceiling division
+    remaining_samples = num_samples - num_files_existing
+    num_batches = (remaining_samples + batch_size - 1) // batch_size  # Ceiling division
     
-    sample_idx = 0
+    sample_idx = num_files_existing
+    print(f"Starting from sample {sample_idx:04d}")
     for batch_num in tqdm(range(num_batches), desc="Generating batches", disable=is_batch_job):
         # Calculate current batch size (last batch might be smaller)
         current_batch_size = min(batch_size, num_samples - batch_num * batch_size)

@@ -12,6 +12,7 @@ from scheduler.scheduler import Scheduler
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+is_batch_job = 'SLURM_JOB_ID' in os.environ
 
 def generate_with_progress(model, scheduler, train_config, model_config, diffusion_config):
     r"""
@@ -47,30 +48,40 @@ def generate(model, scheduler, train_config, model_config, diffusion_config):
     Sample stepwise by going backward one timestep at a time.
     We save the final generated images
     """
-    xt = torch.randn((train_config['num_samples'],
-                      model_config['im_channels'],
-                      model_config['im_size'],
-                      model_config['im_size'])).to(device)
-    
-    for i in tqdm(reversed(range(diffusion_config['num_timesteps']))):
-        # predicted noise
-        noise_pred = model(xt, torch.as_tensor(i).unsqueeze(0).to(device))
-        
-        # Use scheduler to get x0 and xt-1
-        xt, x0_pred = scheduler.sample_prev_timestep(xt, torch.as_tensor(i).to(device), noise_pred)
-    
-    gen_images = torch.clamp(xt, -1., 1.).detach().cpu()
-    gen_images = (gen_images + 1) / 2
-
     final_sample_dir = os.path.join(train_config['task_name'], 'generated_samples')
     os.makedirs(final_sample_dir, exist_ok=True)
+    
+    # Generate in batches to avoid OOM
+    batch_size = train_config.get('generation_batch_size', 1000)  # Default to 100 if not specified
+    num_samples = train_config['num_samples']
+    num_batches = (num_samples + batch_size - 1) // batch_size  # Ceiling division
+    
+    sample_idx = 0
+    for batch_num in tqdm(range(num_batches), desc="Generating batches", disable=is_batch_job):
+        # Calculate current batch size (last batch might be smaller)
+        current_batch_size = min(batch_size, num_samples - batch_num * batch_size)
+        
+        xt = torch.randn((current_batch_size,
+                          model_config['im_channels'],
+                          model_config['im_size'],
+                          model_config['im_size'])).to(device)
+        
+        for i in reversed(range(diffusion_config['num_timesteps'])):
+            # predicted noise
+            noise_pred = model(xt, torch.as_tensor(i).unsqueeze(0).to(device))
+            
+            # Use scheduler to get x0 and xt-1
+            xt, x0_pred = scheduler.sample_prev_timestep(xt, torch.as_tensor(i).to(device), noise_pred)
+        
+        gen_images = torch.clamp(xt, -1., 1.).detach().cpu()
+        gen_images = (gen_images + 1) / 2
 
-    for i in range(gen_images.shape[0]):
-        img = gen_images[i]
-
-        img = torchvision.transforms.ToPILImage()(img)
-        img.save(os.path.join(final_sample_dir, f'sample_{i:04d}.png'))
-        img.close()
+        for i in range(gen_images.shape[0]):
+            img = gen_images[i]
+            img = torchvision.transforms.ToPILImage()(img)
+            img.save(os.path.join(final_sample_dir, f'sample_{sample_idx:04d}.png'))
+            img.close()
+            sample_idx += 1
     
 
 

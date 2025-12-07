@@ -37,7 +37,7 @@ def save_real_images(args):
     )
 
     if mnist_test == 'cifar10':
-       mnist_test = torchvision.datasets.CIFAR10((root="cifar10_data", train=True, download=True, transform=transform))
+       mnist_test = torchvision.datasets.CIFAR10(root="cifar10_data", train=True, download=True, transform=transform)
     
     # Save all test images
     for idx in range(len(mnist_test)):

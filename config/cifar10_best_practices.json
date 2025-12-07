@@ -23,7 +23,7 @@
   "train_params": {
     "task_name": "cifar10_best_practices",
     "batch_size": 64,
-    "num_epochs": 100,
+    "num_epochs": 200,
     "num_samples": 1500,
     "num_samples_progress": 10,
     "num_grid_rows": 10,

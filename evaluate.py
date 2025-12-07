@@ -38,7 +38,7 @@ def save_real_images(args):
         transform=transform
     )
 
-    if mnist_test == 'cifar10':
+    if dataset_name == 'cifar10':
        mnist_test = torchvision.datasets.CIFAR10(root="cifar10_data", train=True, download=True, transform=transform)
     
     # Save all test images
@@ -46,7 +46,8 @@ def save_real_images(args):
         img_tensor, _ = mnist_test[idx]
         
         # Convert tensor to PIL Image (grayscale)
-        img_tensor = img_tensor.squeeze(0)  # Remove channel dimension
+        if dataset_name == 'mnist':
+            img_tensor = img_tensor.squeeze(0)  # Remove channel dimension
         img = transforms.ToPILImage()(img_tensor)
         
         # Save as PNG

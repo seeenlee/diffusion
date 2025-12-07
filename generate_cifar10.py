@@ -53,7 +53,7 @@ def generate(model, scheduler, train_config, model_config, diffusion_config):
     os.makedirs(final_sample_dir, exist_ok=True)
     
     # Generate in batches to avoid OOM
-    batch_size = train_config.get('generation_batch_size', 100)  # Default to 100 if not specified
+    batch_size = train_config.get('generation_batch_size', 1000)  # Default to 100 if not specified
     num_samples = train_config['num_samples']
     num_batches = (num_samples + batch_size - 1) // batch_size  # Ceiling division
     

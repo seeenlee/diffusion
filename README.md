@@ -1,3 +1,17 @@
+# Submission Details
+Please ignore the outfiles and the bash scripts.
+
+To take a closer look at our implementation, these are the main directories/files to look at:
+
+- /config
+- /models
+- /scheduler
+- train_cifar10.py
+- generate_cifar10.py
+- train_mnist.py
+- generate_mnist.py
+
+
 # Scholar Instructions
 
 ## cloning repo

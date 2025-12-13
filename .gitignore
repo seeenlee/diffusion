@@ -10,3 +10,5 @@ mnist/
 cifar10*/
 
 slurm-*.out
+
+.DS_Store
